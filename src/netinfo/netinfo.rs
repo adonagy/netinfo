@@ -72,9 +72,9 @@ impl NetStatistics {
     /// None for inout_type or transport_type means "can be anything"
     pub fn get_bytes_by_attr(&self, pid: Option<Pid>, inout_type: Option<InoutType>, transport_type: Option<TransportType>) -> u64 {
         let mut b = 0;
-        for &io_attr in [None, Some(InoutType::Incoming), Some(InoutType::Outgoing)].into_iter() {
+        for &io_attr in [None, Some(InoutType::Incoming), Some(InoutType::Outgoing)].iter() {
             if inout_type != None && inout_type != io_attr { continue }
-            for &tt_attr in [None, Some(TransportType::Tcp), Some(TransportType::Udp)].into_iter() {
+            for &tt_attr in [None, Some(TransportType::Tcp), Some(TransportType::Udp)].iter() {
                 if transport_type != None && transport_type != tt_attr { continue }
 
                 b += self.map.get(&(pid, io_attr, tt_attr)).map(|&x| x).unwrap_or(0);
@@ -136,7 +136,7 @@ impl PacketCaptureUnit {
     fn get_capture_closure(stop_request: &mut Shared<StopRequest>,
                         statistics: &mut Shared<NetStatistics>,
                         packet_matcher: &mut Shared<PacketMatcher>)
-                        -> Box<FnMut(PacketInfo) -> Result<StopRequest> + Send> {
+                        -> Box<dyn FnMut(PacketInfo) -> Result<StopRequest> + Send> {
         let mut packet_matcher = packet_matcher.clone();
         let mut statistics = statistics.clone();
         let stop_request = stop_request.clone();

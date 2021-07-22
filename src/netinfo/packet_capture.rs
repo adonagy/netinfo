@@ -65,7 +65,7 @@ struct ExtraPacketData {
 
 struct CaptureParser {
     /// Function that handles packet infos
-    packet_info_handler: Box<FnMut(PacketInfo) -> Result<StopRequest> + Send>,
+    packet_info_handler: Box<dyn FnMut(PacketInfo) -> Result<StopRequest> + Send>,
 
     /// Local IP addresses accociated with network interface. Organized in a
     /// HashSet so we can determine quickly, whether IpAddr is local IpAddr.
@@ -81,7 +81,7 @@ impl std::fmt::Debug for CaptureParser {
 }
 
 impl CaptureParser {
-    fn new(packet_info_handler: Box<FnMut(PacketInfo) -> Result<StopRequest> + Send>, local_net_ips_opt: Vec<IpAddr>) -> CaptureParser {
+    fn new(packet_info_handler: Box<dyn FnMut(PacketInfo) -> Result<StopRequest> + Send>, local_net_ips_opt: Vec<IpAddr>) -> CaptureParser {
         let local_net_ips_hashset: HashSet<IpAddr> = local_net_ips_opt.into_iter().collect();
         CaptureParser { packet_info_handler: packet_info_handler, local_net_ips: local_net_ips_hashset }
     }
@@ -211,7 +211,7 @@ impl CaptureHandle {
     /// argument is a closure where all packet infos are dealt with.
     ///
     /// If the closure returns Ok(false), capturing will stop.
-    pub fn new(interface: &NetworkInterface, packet_info_handler: Box<FnMut(PacketInfo) -> Result<StopRequest> + Send>) -> Result<CaptureHandle> {
+    pub fn new(interface: &NetworkInterface, packet_info_handler: Box<dyn FnMut(PacketInfo) -> Result<StopRequest> + Send>) -> Result<CaptureHandle> {
         info!("CaptureHandle for interface: {:?}", interface);
 
         Ok(CaptureHandle {
