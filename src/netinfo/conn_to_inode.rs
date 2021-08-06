@@ -65,9 +65,23 @@ impl ConnToInodeMap {
             let mut addr = [0u8; 16];
             Self::fix_endianness(&mut addr[..])?;
             let port = Self::parse_ip_addr_to_bytes(s, &mut addr[..])?;
-            Ok(SocketAddr::new(IpAddr::V6(Ipv6Addr::from(addr)), port))
+
+            // @adonagy
+            // we also need to check for potentional IPv4 addresses mapped as IPv6 (::FFFF:<IPv4-address>)
+            let ipv4_mapped:[u8; 10] = [0, 0, 0, 0, 0, 0, 0, 0, 255, 255];
+
+            if addr.starts_with(&ipv4_mapped) {
+                if let Ok(mut arr) = TryInto::<[u8; 4]>::try_into(&addr[12..16]) {
+                    Self::fix_endianness(& mut arr)?;
+                    Ok(SocketAddr::new(IpAddr::V4(Ipv4Addr::from(arr)), port))
+                } else {
+                    Err(ErrorKind::ProcNetFileHasWrongFormat.into())
+                }
+            } else {
+                Ok(SocketAddr::new(IpAddr::V6(Ipv6Addr::from(addr)), port))
+            }
         } else {
-            Err(ErrorKind::ProcNetFileHasWrongFormat)?
+            Err(ErrorKind::ProcNetFileHasWrongFormat.into())
         }
     }
 
