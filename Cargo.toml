@@ -20,6 +20,6 @@ doc = false
 
 [dependencies]
 pnet = "0.28.0"
-byteorder = "1.0"
+byteorder = "1.4"
 error-chain = "0.12"
 log = "0.4.5"

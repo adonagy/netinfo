@@ -40,7 +40,7 @@ impl NetStatistics {
         self.map.iter()
                 .filter(|&(&(kpid, kc, ktt), _)| (pid == None || pid == kpid) && (c == None || c == kc) && (tt == None || tt == ktt))
                 .map(|(_, &b)| b)
-                .fold(0, |b, acc| b + acc)
+                .sum()
     }
 
     /// Get network usage per pid.
@@ -61,9 +61,9 @@ impl NetStatistics {
     /// List all pids which have some data attached.
     pub fn get_all_pids(&self) -> Vec<Pid> {
         let mut pids: Vec<_> = self.map.keys().map(|&(pid_opt, _, _)| pid_opt)
-                                                .filter_map(|pid_opt| pid_opt)
+                                                .flatten()
                                                 .collect();
-        pids.sort();
+        pids.sort_unstable();
         pids.dedup();
         pids
     }
@@ -73,11 +73,13 @@ impl NetStatistics {
     pub fn get_bytes_by_attr(&self, pid: Option<Pid>, inout_type: Option<InoutType>, transport_type: Option<TransportType>) -> u64 {
         let mut b = 0;
         for &io_attr in [None, Some(InoutType::Incoming), Some(InoutType::Outgoing)].iter() {
-            if inout_type != None && inout_type != io_attr { continue }
+            if inout_type != None && inout_type != io_attr {
+                continue
+            }
             for &tt_attr in [None, Some(TransportType::Tcp), Some(TransportType::Udp)].iter() {
                 if transport_type != None && transport_type != tt_attr { continue }
 
-                b += self.map.get(&(pid, io_attr, tt_attr)).map(|&x| x).unwrap_or(0);
+                b += self.map.get(&(pid, io_attr, tt_attr)).copied().unwrap_or(0);
             }
         }
 
@@ -100,7 +102,7 @@ impl NetStatistics {
     ///
     /// Please use the information from the kernel for that purpose.
     pub fn get_total(&self) -> u64 {
-        self.map.values().fold(0, |acc, bytes| acc + bytes)
+        self.map.values().sum()
     }
 }
 
@@ -165,9 +167,9 @@ impl PacketCaptureUnit {
         let capture_handle = new_shared(CaptureHandle::new(i, boxed_closure)?);
 
         Ok(PacketCaptureUnit {
-            capture_handle: capture_handle,
-            statistics: statistics,
-            stop_request: stop_request,
+            capture_handle,
+            statistics,
+            stop_request,
             thread_handle_opt: None,
             thread_error: new_shared(None)
         })
@@ -233,7 +235,7 @@ pub struct Netinfo {
 impl Netinfo {
     /// Lists all non-loopback, active (= up and runnig) network interfaces
     pub fn list_net_interfaces() -> Result<Vec<NetworkInterface>> {
-        Ok(CaptureHandle::list_net_interfaces().into_iter().map(|i| NetworkInterface::from(i)).collect())
+        Ok(CaptureHandle::list_net_interfaces().into_iter().map(NetworkInterface::from).collect())
     }
 
     /// Constructor for Netinfo. A Netinfo object can handle multple network interfaces at the same time.
@@ -287,7 +289,7 @@ impl Netinfo {
     /// The `Result` is there for general error handling, the enclosed `Vec<Error>` is the actual return value.
     pub fn pop_thread_errors(&mut self) -> Result<Vec<Error>> {
         let temp = self.units.iter_mut().map(|u| u.pop_thread_error()).collect::<Result<Vec<Option<Error>>>>()?;
-        Ok(temp.into_iter().filter_map(|err_opt| err_opt).collect())
+        Ok(temp.into_iter().flatten().collect())
     }
 
     /// Returns the statistics about traffic since last clear.

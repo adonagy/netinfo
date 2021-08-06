@@ -151,3 +151,9 @@ impl PacketMatcher {
         self.min_refresh_interval = t;
     }
 }
+
+impl Default for PacketMatcher {
+    fn default() -> Self {
+        Self::new()
+    }
+}

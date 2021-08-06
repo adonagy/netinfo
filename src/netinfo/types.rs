@@ -115,7 +115,7 @@ pub struct PacketInfo {
 impl PacketInfo {
     /// Constructor for `PacketInfo` type.
     pub fn new(sip: SocketAddr, dip: SocketAddr, datalen: u64, transport_type: TransportType, inout_type: Option<InoutType>) -> PacketInfo {
-        PacketInfo { sip: sip, dip: dip, time: 0, datalen: datalen, transport_type: transport_type, inout_type: inout_type }
+        PacketInfo { sip, dip, time: 0, datalen, transport_type, inout_type }
     }
 }
 
@@ -151,7 +151,7 @@ pub struct Connection {
 impl Connection {
     /// Generate new `Connection` from Ipv4 or Ipv6 addressses.
     pub fn new(local: SocketAddr, remote: SocketAddr) -> Connection {
-        Connection { local: local, remote: remote }
+        Connection { local, remote }
     }
 
     /*

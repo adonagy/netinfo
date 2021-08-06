@@ -18,14 +18,14 @@ pub use netinfo::*;
 use std::time::Duration;
 use std::thread::sleep;
 
-static SEPARATOR: &'static str = "#####################";
+static SEPARATOR: &str = "#####################";
 
 fn main() {
     // Please use error handling instead of unwrap() in real applications - the functions heavily depend on network and thread IO, so they
     // CAN and WILL fail at some point!
 
     let net_interfaces = Netinfo::list_net_interfaces().unwrap();
-    if net_interfaces.len() == 0 {
+    if net_interfaces.is_empty() {
         println!("No up-and-running network interfaces found!");
         return;
     }
@@ -33,9 +33,9 @@ fn main() {
     print!("Please use applications that send data over following network interfaces to see statistics: ");
     print!("{}", net_interfaces[0].get_name_as_str());
     for i in &net_interfaces[1..] { print!(", {}", i.get_name_as_str()); }
-    println!("");
+    println!();
     println!("{}", SEPARATOR);
-    println!("");
+    println!();
 
     let mut netinfo = Netinfo::new(&net_interfaces[..]).unwrap();
     netinfo.set_min_refresh_interval(Some(Duration::from_millis(20))).unwrap(); // to avoid 100% CPU usage
@@ -45,7 +45,7 @@ fn main() {
     loop {
         // "handle" erros in worker threads
         let mut errors = netinfo.pop_thread_errors().unwrap();
-        if errors.len() != 0 {
+        if !errors.is_empty() {
             panic!("an error occured in a worker thread: {}", errors.pop().unwrap());
         }
 
@@ -65,13 +65,13 @@ fn main() {
             let num_tcp_bytes = statistics.get_bytes_by_transport_type(TransportType::Tcp);
             let num_udp_bytes = statistics.get_bytes_by_transport_type(TransportType::Udp);
 
-            println!("");
+            println!();
             println!("Tcp/Udp: {}kB / {}kB", num_tcp_bytes / 1000, num_udp_bytes / 1000);
             println!("Unknown: {}kB", num_unknown / 1000);
             println!("Total: {}kB", num_total_bytes / 1000);
-            println!("");
+            println!();
             println!("{}", SEPARATOR);
-            println!("");
+            println!();
         }
         netinfo.clear().unwrap();
         sleep(Duration::new(1, 0));

@@ -1,5 +1,6 @@
 use netinfo::{Inode, Connection, TransportType};
 use std::collections::{HashMap};
+use std::convert::TryInto;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::BufRead;
@@ -30,8 +31,8 @@ impl ConnToInodeMap {
     ///
     /// Because the network format is big endian, the order of the bytes has to be reversed afterwards.
     fn parse_ip_addr_to_bytes(s: &str, bytes: &mut [u8]) -> Result<u16> {
-        if s.len() != bytes.len() * 2 + 1 + 4           { return Err(ErrorKind::ProcNetFileHasWrongFormat)?; }
-        if s.chars().nth(bytes.len() * 2) != Some(':')  { return Err(ErrorKind::ProcNetFileHasWrongFormat)?; }
+        if s.len() != bytes.len() * 2 + 1 + 4           { return Err(ErrorKind::ProcNetFileHasWrongFormat.into()); }
+        if s.chars().nth(bytes.len() * 2) != Some(':')  { return Err(ErrorKind::ProcNetFileHasWrongFormat.into()); }
 
         for (i, byte) in bytes.iter_mut().enumerate() {
             *byte = u8::from_str_radix(&s[i*2..i*2 + 2], 16).map_err(|_| ErrorKind::ProcNetFileHasWrongFormat)?;
@@ -121,7 +122,7 @@ impl ConnToInodeMap {
 
     /// Lookup connection in HashMap and return associated inode when found.
     fn find_inode_tcp(&self, tt: TransportType, c: Connection) -> Option<Inode> {
-        self.conn_to_inode_map.get(&(tt, c)).map(|&x| x)
+        self.conn_to_inode_map.get(&(tt, c)).copied()
     }
 
     /// Lookup connection in HashMap and return associated inode when found.
@@ -130,7 +131,7 @@ impl ConnToInodeMap {
     fn find_inode_udp(&self, tt: TransportType, mut c: Connection, onesided: bool, port_only: bool) -> Option<Inode> {
         if onesided { c = c.get_resetted_remote(); }
         if port_only { c = c.get_resetted_ip(); }
-        self.conn_to_inode_map.get(&(tt, c)).map(|&x| x)
+        self.conn_to_inode_map.get(&(tt, c)).copied()
     }
 
     /// Lookup connection in HashMap and return associated inode when found
@@ -148,5 +149,11 @@ impl ConnToInodeMap {
                 self.find_inode_tcp(tt, c)
             }
         }
+    }
+}
+
+impl Default for ConnToInodeMap {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -5,7 +5,7 @@ use pnet::datalink::{self, NetworkInterface, Channel, Config};
 use pnet::packet::ethernet::{EtherTypes, EthernetPacket};
 use pnet::packet::ip::{IpNextHeaderProtocols};
 use pnet::packet::ipv4::{Ipv4Packet};
-use pnet::packet::ipv6::{Ipv6Packet};
+use pnet::packet::ipv6::Ipv6Packet;
 use pnet::packet::tcp::{TcpPacket};
 use pnet::packet::udp::{UdpPacket};
 use pnet::packet::{Packet};
@@ -55,7 +55,7 @@ macro_rules! handle {
 
 /// Test flags whether device is running
 fn is_running(flags: u32) -> bool {
-  !(flags & IFF_LOOPBACK as u32 != 0) && (flags & IFF_UP as u32 != 0) && (flags & IFF_RUNNING as u32 != 0)
+  flags & IFF_LOOPBACK as u32 == 0 && (flags & IFF_UP as u32 != 0) && (flags & IFF_RUNNING as u32 != 0)
 }
 
 
@@ -83,12 +83,12 @@ impl std::fmt::Debug for CaptureParser {
 impl CaptureParser {
     fn new(packet_info_handler: Box<dyn FnMut(PacketInfo) -> Result<StopRequest> + Send>, local_net_ips_opt: Vec<IpAddr>) -> CaptureParser {
         let local_net_ips_hashset: HashSet<IpAddr> = local_net_ips_opt.into_iter().collect();
-        CaptureParser { packet_info_handler: packet_info_handler, local_net_ips: local_net_ips_hashset }
+        CaptureParser { packet_info_handler, local_net_ips: local_net_ips_hashset }
     }
 
     fn handle_channel(&mut self, channel: &mut Channel) -> Result<bool> {
-		match channel {
-			&mut Channel::Ethernet(_ /* ref tx */, ref mut rx) => {
+		match *channel {
+			Channel::Ethernet(_ /* ref tx */, ref mut rx) => {
                 loop {
                     let packet = rx.next().chain_err(|| ErrorKind::EthernetReceiveError)?;
                     let extra_data = ExtraPacketData { length: packet.len() as u64 };

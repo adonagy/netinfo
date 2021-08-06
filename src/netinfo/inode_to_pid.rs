@@ -28,8 +28,12 @@ impl InodeToPidMap {
         let entries = match read_dir(format!("/proc/{}/fd", pid)) {
             Ok(x) => x,
             Err(ioerror) => {
-                if ioerror.kind() == IOErrorKind::PermissionDenied { /* ignore */ return Ok(()) }
-                else { return Err(ioerror)?; }
+                println!("[netinfo] PID {} errored", pid);
+                if ioerror.kind() == IOErrorKind::PermissionDenied { 
+                    println!("[netinfo] PID {} ignored", pid);
+                    /* ignore */ return Ok(()) 
+                }
+                else { return Err(ioerror.into()); }
             }
         };
 
@@ -39,12 +43,11 @@ impl InodeToPidMap {
             let link_target_str = link_target.as_path().to_string_lossy();
 
             // sockets have the form "socket:[inode]"; for example "socket:[14235]"
-            if link_target_str.starts_with("socket:[") && link_target_str.ends_with("]") {
+            if link_target_str.starts_with("socket:[") && link_target_str.ends_with(']') {
                 let inode = Inode::from_str(&link_target_str[8..link_target_str.len() - 1])?;
                 self.inode_to_pid_map.insert(inode, pid);
             }
         }
-
         Ok(())
     }
 
@@ -78,6 +81,12 @@ impl InodeToPidMap {
 
     /// Returns None if inode was not found
     pub fn find_pid(&self, inode: Inode) -> Option<Pid> {
-        self.inode_to_pid_map.get(&inode).map(|&x| x)
+        self.inode_to_pid_map.get(&inode).copied()
+    }
+}
+
+impl Default for InodeToPidMap {
+    fn default() -> Self {
+        Self::new()
     }
 }
